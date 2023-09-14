@@ -7,52 +7,94 @@
 
 #include "udp.h"
 
+int solve_puzzle(int token);
+int compare(struct sockaddr_in *a, struct sockaddr_in *b);
+
 int main(int argc, char *argv[]) {
-    int server_sock, dns_socket;
-    char server_message[BUF_SIZE], dns_message[BUF_SIZE];
+    int sock;
+    char message[BUF_SIZE];
     int str_len;
-    socklen_t adr_sz;
+    socklen_t address_size;
+    int puzzle = rand();
 
-    struct sockaddr_in serv_adr, from_adr;
+    struct sockaddr_in server_address, dns_address, incoming_address;
 
-    if (argc != 3) {
-        printf("Usage : %s <IP> <port>\n", argv[0]);
-        exit(1);
+    sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock == -1) {
+        error_handling("sock() error");
     }
-
-    server_sock = socket(PF_INET, SOCK_DGRAM, 0);
-    if (server_sock == -1) {
-        error_handling("socket() error");
-    }
+    puts("User socket creation successful");
 
     const int option = 1;
-    setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
-    memset(&serv_adr, 0, sizeof(serv_adr));
-    serv_adr.sin_family = AF_INET;
-    serv_adr.sin_addr.s_addr = inet_addr(argv[1]);
-    serv_adr.sin_port = htons(atoi(argv[2]));
+    memset(&server_address, 0, sizeof(server_address));
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = inet_addr(server_ip);
+    server_address.sin_port = htons(atoi(server_port));
+
+    memset(&dns_address, 0, sizeof(dns_address));
+    dns_address.sin_family = AF_INET;
+    dns_address.sin_addr.s_addr = inet_addr(dns_ip);
+    dns_address.sin_port = htons(atoi(dns_port));
 
     while (1) {
-        fputs("Insert server_message(q to quit): ", stdout);
-        fgets(server_message, sizeof(server_message), stdin);
-        if (!strcmp(server_message, "q\n") || !strcmp(server_message, "Q\n")) {
+        sprintf(message, "%d", puzzle);
+
+        puts("User queried server");
+        sendto(sock, message, strlen(message), 0,
+               (struct sockaddr *) &server_address, sizeof(server_address));
+
+        do {
+            address_size = sizeof(incoming_address);
+            str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
+                                     (struct sockaddr *) &incoming_address, &address_size);
+            message[str_len] = '\0';
+        } while(!compare(&server_address, &incoming_address));
+        puts("User received response from server");
+
+        if(strcmp(message, "1") == 0) {
             break;
         }
 
-        sendto(server_sock, server_message, strlen(server_message), 0,
-               (struct sockaddr *) &serv_adr, sizeof(serv_adr));
-        adr_sz = sizeof(from_adr);
-        str_len = (int) recvfrom(server_sock, server_message, BUF_SIZE, 0,
-                                 (struct sockaddr *) &from_adr, &adr_sz);
-        server_message[str_len] = 0;
-        printf("Message from server: %s", server_message);
+        sprintf(message, "%d", 1);
+        sendto(sock, message, strlen(message), 0,
+               (struct sockaddr *) &dns_address, sizeof(dns_address));
+        puts("User queried DNS");
+
+        do {
+            address_size = sizeof(incoming_address);
+            str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
+                                     (struct sockaddr *) &incoming_address, &address_size);
+            message[str_len] = '\0';
+        } while(!compare(&dns_address, &incoming_address));
+        puts("User received response from DNS");
+
+        const int token = atoi(message);
+        puzzle = solve_puzzle(token);
+        puts("User Puzzle Solving Successful");
     }
 
-    strcpy(server_message, "Q");
-    sendto(server_sock, server_message, strlen(server_message), 0,
-           (struct sockaddr *) &serv_adr, sizeof(serv_adr));
+    puts("All processes have completed");
+    strcpy(message, "Q");
+    sendto(sock, message, strlen(message), 0,
+           (struct sockaddr *) &server_address, sizeof(server_address));
+    sendto(sock, message, strlen(message), 0,
+           (struct sockaddr *) &dns_address, sizeof(dns_address));
 
-    close(server_sock);
+    close(sock);
+    getchar();
     return 0;
 }
+
+int solve_puzzle(int token) {
+    while((token & 1023) != 0) {
+        ++token;
+    }
+    return token;
+}
+
+int compare(struct sockaddr_in *a, struct sockaddr_in *b) {
+    return (a -> sin_addr).s_addr == (b -> sin_addr).s_addr && (a -> sin_port) == (b -> sin_port);
+}
+

@@ -7,47 +7,62 @@
 
 #include "udp.h"
 
+int verify_puzzle(int puzzle);
+
 int main(int argc, char *argv[]) {
-    int serv_sock;
+    int sock;
     char message[BUF_SIZE];
     int str_len;
-    socklen_t clnt_adr_sz;
+    socklen_t address_size;
+    int puzzle;
 
-    struct sockaddr_in serv_adr, clnt_adr;
-    if (argc != 2) {
-        printf("Usage : %s <port> \n", argv[0]);
-        exit(1);
-    }
+    struct sockaddr_in server_address, user_address;
 
-    serv_sock = socket(PF_INET, SOCK_DGRAM, 0);
-    if (serv_sock == -1) {
+    sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sock == -1) {
         error_handling("UDP socket creation error");
     }
+    puts("Server socket creation successful");
 
     const int option = 1;
-    setsockopt(serv_sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
-    memset(&serv_adr, 0, sizeof(serv_adr));
-    serv_adr.sin_family = AF_INET;
-    serv_adr.sin_addr.s_addr = htonl(INADDR_ANY);
-    serv_adr.sin_port = htons(atoi(argv[1]));
+    memset(&server_address, 0, sizeof(server_address));
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = inet_addr(server_ip);
+    server_address.sin_port = htons(atoi(server_port));
 
-    if (bind(serv_sock, (struct sockaddr *) &serv_adr, sizeof(serv_adr)) == -1) {
+    if (bind(sock, (struct sockaddr *) &server_address, sizeof(server_address)) == -1) {
         error_handling("bind() error");
     }
+    puts("Server socket bind successful");
+
     while (1) {
-        clnt_adr_sz = sizeof(clnt_adr);
-        str_len = recvfrom(serv_sock, message, BUF_SIZE, 0,
-                           (struct sockaddr *) &clnt_adr, &clnt_adr_sz);
+        address_size = sizeof(user_address);
+        str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
+                           (struct sockaddr *) &user_address, &address_size);
         message[str_len] = '\0';
-        printf("%s", message);
+        puts("server received query from user");
+
         if(strcmp(message, "Q") == 0) {
             break;
         }
-        sendto(serv_sock, message, str_len, 0,
-               (struct sockaddr *) &clnt_adr, clnt_adr_sz);
+
+        const int verified = verify_puzzle(atoi(message));
+        sprintf(message, "%d", verified);
+
+        sendto(sock, message, str_len, 0,
+               (struct sockaddr *) &user_address, address_size);
+        puts("server sent response to user");
     }
 
-    close(serv_sock);
+    puts("All processes have completed");
+
+    close(sock);
+    getchar();
     return 0;
+}
+
+int verify_puzzle(int puzzle) {
+    return (puzzle & 1023) == 0;
 }

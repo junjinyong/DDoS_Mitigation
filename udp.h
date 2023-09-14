@@ -13,4 +13,10 @@ void error_handling(char* message) {
     exit(1);
 }
 
+const char* server_ip = "127.0.0.1";
+const char* server_port = "10000";
+
+const char* dns_ip = "127.0.0.1";
+const char* dns_port = "10001";
+
 #endif //DDOS_MITIGATION_UDP_H
