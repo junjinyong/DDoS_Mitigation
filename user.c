@@ -8,8 +8,8 @@
 #include "udp.h"
 
 int main(int argc, char *argv[]) {
-    int user_server_sock;
-    char message[BUF_SIZE];
+    int server_sock, dns_socket;
+    char server_message[BUF_SIZE], dns_message[BUF_SIZE];
     int str_len;
     socklen_t adr_sz;
 
@@ -20,13 +20,13 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    user_server_sock = socket(PF_INET, SOCK_DGRAM, 0);
-    if (user_server_sock == -1) {
+    server_sock = socket(PF_INET, SOCK_DGRAM, 0);
+    if (server_sock == -1) {
         error_handling("socket() error");
     }
 
     const int option = 1;
-    setsockopt(user_server_sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
     memset(&serv_adr, 0, sizeof(serv_adr));
     serv_adr.sin_family = AF_INET;
@@ -34,25 +34,25 @@ int main(int argc, char *argv[]) {
     serv_adr.sin_port = htons(atoi(argv[2]));
 
     while (1) {
-        fputs("Insert message(q to quit): ", stdout);
-        fgets(message, sizeof(message), stdin);
-        if (!strcmp(message, "q\n") || !strcmp(message, "Q\n")) {
+        fputs("Insert server_message(q to quit): ", stdout);
+        fgets(server_message, sizeof(server_message), stdin);
+        if (!strcmp(server_message, "q\n") || !strcmp(server_message, "Q\n")) {
             break;
         }
 
-        sendto(user_server_sock, message, strlen(message), 0,
+        sendto(server_sock, server_message, strlen(server_message), 0,
                (struct sockaddr *) &serv_adr, sizeof(serv_adr));
         adr_sz = sizeof(from_adr);
-        str_len = (int) recvfrom(user_server_sock, message, BUF_SIZE, 0,
+        str_len = (int) recvfrom(server_sock, server_message, BUF_SIZE, 0,
                                  (struct sockaddr *) &from_adr, &adr_sz);
-        message[str_len] = 0;
-        printf("Message from server: %s", message);
+        server_message[str_len] = 0;
+        printf("Message from server: %s", server_message);
     }
 
-    strcpy(message, "Q");
-    sendto(user_server_sock, message, strlen(message), 0,
+    strcpy(server_message, "Q");
+    sendto(server_sock, server_message, strlen(server_message), 0,
            (struct sockaddr *) &serv_adr, sizeof(serv_adr));
 
-    close(user_server_sock);
+    close(server_sock);
     return 0;
 }
