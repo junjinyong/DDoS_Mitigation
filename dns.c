@@ -12,9 +12,10 @@ int main(int argc, char *argv[]) {
     char message[BUF_SIZE];
     int str_len;
     socklen_t address_size;
-    int puzzle;
+    int seed, length, difficulty, hash_chain[CHAIN_LENGTH];
 
-    struct sockaddr_in dns_address, user_address;
+    struct sockaddr_in incoming_address;
+    initialize_address();
 
     sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == -1) {
@@ -25,31 +26,58 @@ int main(int argc, char *argv[]) {
     const int option = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
-    memset(&dns_address, 0, sizeof(dns_address));
-    dns_address.sin_family = AF_INET;
-    dns_address.sin_addr.s_addr = inet_addr(dns_ip);
-    dns_address.sin_port = htons(atoi(dns_port));
-
     if (bind(sock, (struct sockaddr *) &dns_address, sizeof(dns_address)) == -1) {
         error_handling("bind() error");
     }
     puts("DNS socket bind successful");
 
+    int index = 0;
     while (1) {
-        address_size = sizeof(user_address);
+        address_size = sizeof(incoming_address);
         str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
-                                 (struct sockaddr *) &user_address, &address_size);
+                                 (struct sockaddr *) &incoming_address, &address_size);
         message[str_len] = '\0';
+
+        if(compare(&incoming_address, &auth_address)) {
+            puts("Local DNS received signal from authoritative DNS");
+
+            sscanf(message, "%d %d %d", &seed, &length, &difficulty);
+
+            hash_chain[0] = seed + rand();
+            printf("seed: %d\n", seed);
+            for(int i = 1; i < length; ++i) {
+                hash_chain[i] = (hash_chain[i - 1] + 233333) * 2027;
+                if(hash_chain[i] == -1) {
+                    hash_chain[i] = 20020517;
+                }
+            }
+
+            index = length - 1;
+            printf("length: %d\n", length);
+
+            continue;
+        }
+
         puts("DNS received query from user");
 
         if(strcmp(message, "Q") == 0) {
             break;
         }
 
-        sprintf(message, "%d", rand());
+        printf("index: %d\n", index);
+        if(index >= 0) {
+            sprintf(message, "%d", hash_chain[index]);
+            --index;
+        } else {
+            sprintf(message, "%d", 1);
+            sendto(sock, message, strlen(message), 0,
+                   (struct sockaddr *) &auth_address, address_size);
 
-        sendto(sock, message, str_len, 0,
-               (struct sockaddr *) &user_address, address_size);
+            sprintf(message, "%d", -1);
+        }
+
+        sendto(sock, message, strlen(message), 0,
+               (struct sockaddr *) &incoming_address, address_size);
         puts("DNS sent response to user");
     }
 

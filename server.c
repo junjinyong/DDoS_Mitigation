@@ -4,10 +4,12 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <time.h>
 
 #include "udp.h"
 
 int verify_puzzle(int puzzle);
+int monitor();
 
 int main(int argc, char *argv[]) {
     int sock;
@@ -16,7 +18,8 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
     int puzzle;
 
-    struct sockaddr_in server_address, user_address;
+    struct sockaddr_in incoming_address;
+    initialize_address();
 
     sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == -1) {
@@ -27,10 +30,7 @@ int main(int argc, char *argv[]) {
     const int option = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
-    memset(&server_address, 0, sizeof(server_address));
-    server_address.sin_family = AF_INET;
-    server_address.sin_addr.s_addr = inet_addr(server_ip);
-    server_address.sin_port = htons(atoi(server_port));
+
 
     if (bind(sock, (struct sockaddr *) &server_address, sizeof(server_address)) == -1) {
         error_handling("bind() error");
@@ -38,9 +38,10 @@ int main(int argc, char *argv[]) {
     puts("Server socket bind successful");
 
     while (1) {
-        address_size = sizeof(user_address);
+        address_size = sizeof(incoming_address);
         str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
-                           (struct sockaddr *) &user_address, &address_size);
+                                 (struct sockaddr *) &incoming_address, &address_size);
+
         message[str_len] = '\0';
         puts("server received query from user");
 
@@ -51,9 +52,17 @@ int main(int argc, char *argv[]) {
         const int verified = verify_puzzle(atoi(message));
         sprintf(message, "%d", verified);
 
-        sendto(sock, message, str_len, 0,
-               (struct sockaddr *) &user_address, address_size);
+        sendto(sock, message, strlen(message), 0,
+               (struct sockaddr *) &incoming_address, address_size);
         puts("server sent response to user");
+
+        const int signal = monitor();
+        if(signal) {
+            sprintf(message, "%d", signal);
+            sendto(sock, message, strlen(message), 0,
+                   (struct sockaddr *) &auth_address, address_size);
+            puts("server sent signal to authoritative DNS");
+        }
     }
 
     puts("All processes have completed");
@@ -65,4 +74,19 @@ int main(int argc, char *argv[]) {
 
 int verify_puzzle(int puzzle) {
     return (puzzle & 1023) == 0;
+}
+
+int monitor() {
+    static long long int traffic = 0;
+    static time_t prev = 0;
+
+    ++traffic;
+    time_t curr = time(NULL);
+    if(curr - prev >= 3) {
+        const int result = (traffic >= 100);
+        traffic = 0;
+        prev = curr;
+        return result ? 1 : -1;
+    }
+    return 0;
 }

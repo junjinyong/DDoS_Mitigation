@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Specify the list of C files you want to compile and run
-c_files=("server.c" "dns.c" "user.c")
+c_files=("server.c" "auth.c" "dns.c" "user.c")
 
 # Specify the corresponding list of arguments for each C file
 # Use empty string ("") if no arguments are needed for a particular file
-c_args=("" "" "")
+c_args=("" "" "" "")
 
 # Check if the lengths of the two lists are equal
 if [ "${#c_files[@]}" -ne "${#c_args[@]}" ]; then
