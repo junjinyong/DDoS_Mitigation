@@ -31,6 +31,8 @@ int main(int argc, char *argv[]) {
     }
     puts("DNS socket bind successful");
 
+    sleep(1);
+
     int index = 0;
     while (1) {
         address_size = sizeof(incoming_address);
@@ -44,7 +46,6 @@ int main(int argc, char *argv[]) {
             sscanf(message, "%d %d %d", &seed, &length, &difficulty);
 
             hash_chain[0] = seed + rand();
-            printf("seed: %d\n", seed);
             for(int i = 1; i < length; ++i) {
                 hash_chain[i] = (hash_chain[i - 1] + 233333) * 2027;
                 if(hash_chain[i] == -1) {
@@ -53,7 +54,6 @@ int main(int argc, char *argv[]) {
             }
 
             index = length - 1;
-            printf("length: %d\n", length);
 
             continue;
         }
@@ -66,14 +66,16 @@ int main(int argc, char *argv[]) {
 
         printf("index: %d\n", index);
         if(index >= 0) {
-            sprintf(message, "%d", hash_chain[index]);
+            sprintf(message, "%d %d", hash_chain[index], difficulty);
             --index;
         } else {
             sprintf(message, "%d", 1);
             sendto(sock, message, strlen(message), 0,
                    (struct sockaddr *) &auth_address, address_size);
 
-            sprintf(message, "%d", -1);
+            sleep(1);
+
+            sprintf(message, "%d %d", -1, 32);
         }
 
         sendto(sock, message, strlen(message), 0,

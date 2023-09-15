@@ -8,7 +8,7 @@
 #include <string.h>
 
 #define BUF_SIZE 1024
-#define CHAIN_LENGTH 128
+#define CHAIN_LENGTH 64
 
 void error_handling(char* message) {
     fputs(message, stderr);
@@ -38,10 +38,10 @@ void initialize_address() {
     dns_address.sin_addr.s_addr = inet_addr(dns_ip);
     dns_address.sin_port = htons(atoi(dns_port));
 
-    memset(&dns_address, 0, sizeof(auth_address));
-    dns_address.sin_family = AF_INET;
-    dns_address.sin_addr.s_addr = inet_addr(auth_ip);
-    dns_address.sin_port = htons(atoi(auth_port));
+    memset(&auth_address, 0, sizeof(auth_address));
+    auth_address.sin_family = AF_INET;
+    auth_address.sin_addr.s_addr = inet_addr(auth_ip);
+    auth_address.sin_port = htons(atoi(auth_port));
 }
 
 int compare(struct sockaddr_in *a, struct sockaddr_in *b) {

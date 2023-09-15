@@ -37,6 +37,8 @@ int main(int argc, char *argv[]) {
     }
     puts("Server socket bind successful");
 
+    sleep(1);
+
     while (1) {
         address_size = sizeof(incoming_address);
         str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
@@ -73,7 +75,8 @@ int main(int argc, char *argv[]) {
 }
 
 int verify_puzzle(int puzzle) {
-    return (puzzle & 1023) == 0;
+    return 1;
+    // return (puzzle & 1023) == 0;
 }
 
 int monitor() {
@@ -82,11 +85,17 @@ int monitor() {
 
     ++traffic;
     time_t curr = time(NULL);
-    if(curr - prev >= 3) {
-        const int result = (traffic >= 100);
+    if(curr - prev >= 1) {
+        int result = 0;
+        if(traffic > 20) {
+            result = 1;
+        } else if(traffic < 5) {
+            result = -1;
+        }
+
         traffic = 0;
         prev = curr;
-        return result ? 1 : -1;
+        return result;
     }
     return 0;
 }

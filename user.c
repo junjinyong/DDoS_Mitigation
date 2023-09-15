@@ -7,14 +7,14 @@
 
 #include "udp.h"
 
-int solve_puzzle(int token);
+int solve_puzzle(int token, int difficulty);
 
 int main(int argc, char *argv[]) {
     int sock;
     char message[BUF_SIZE];
     int str_len;
     socklen_t address_size;
-    int puzzle = rand();
+    int token, difficulty, puzzle = rand();
 
     struct sockaddr_in incoming_address;
     initialize_address();
@@ -28,7 +28,9 @@ int main(int argc, char *argv[]) {
     const int option = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
 
-    int iter = 1000000;
+    sleep(2);
+
+    int iter = 100000;
     while (iter--) {
         sprintf(message, "%d", puzzle);
 
@@ -36,12 +38,11 @@ int main(int argc, char *argv[]) {
         sendto(sock, message, strlen(message), 0,
                (struct sockaddr *) &server_address, sizeof(server_address));
 
-        do {
-            address_size = sizeof(incoming_address);
-            str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
-                                     (struct sockaddr *) &incoming_address, &address_size);
-            message[str_len] = '\0';
-        } while(!compare(&server_address, &incoming_address));
+        address_size = sizeof(incoming_address);
+        str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
+                                 (struct sockaddr *) &incoming_address, &address_size);
+        message[str_len] = '\0';
+
         puts("User received response from server");
 
 
@@ -50,20 +51,18 @@ int main(int argc, char *argv[]) {
                (struct sockaddr *) &dns_address, sizeof(dns_address));
         puts("User queried DNS");
 
-        do {
-            address_size = sizeof(incoming_address);
-            str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
-                                     (struct sockaddr *) &incoming_address, &address_size);
-            message[str_len] = '\0';
-        } while(!compare(&dns_address, &incoming_address));
+        address_size = sizeof(incoming_address);
+        str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
+                                 (struct sockaddr *) &incoming_address, &address_size);
+        message[str_len] = '\0';
+
         puts("User received response from DNS");
 
-        const int token = atoi(message);
-        printf("token: %d\n", token);
+        sscanf(message, "%d %d", &token, &difficulty);
         if(token == -1) {
             sleep(1);
         } else {
-            puzzle = solve_puzzle(token);
+            puzzle = solve_puzzle(token, difficulty);
             puts("User Puzzle Solving Successful");
         }
     }
@@ -82,8 +81,12 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-int solve_puzzle(int token) {
-    while((token & 1023) != 0) {
+int solve_puzzle(int token, int difficulty) {
+    static int x = 20232023;
+
+    const int mask = (1 << difficulty) - 1;
+    while((token & mask) != 0) {
+        x = (x % 48) * 233 + 157;
         ++token;
     }
     return token;
