@@ -1,11 +1,13 @@
 #!/bin/bash
 
 # Specify the list of C files you want to compile and run
-c_files=("server.c" "auth.c" "dns.c" "user.c")
+#c_files=("server.c" "auth.c"   "dns.c" "dns.c" "dns.c" "dns.c"   "user.c" "user.c" "user.c" "user.c" "user.c" "user.c" "user.c" "user.c")
+c_files=("server.c" "dns.c" "user.c" "dns.c" "user.c")
 
 # Specify the corresponding list of arguments for each C file
 # Use empty string ("") if no arguments are needed for a particular file
-c_args=("" "" "" "")
+# c_args=("" ""   "0" "1" "2" "3"   "0" "1" "2" "3" "0" "1" "2" "3")
+c_args=("" "0" "0" "1" "1")
 
 # Check if the lengths of the two lists are equal
 if [ "${#c_files[@]}" -ne "${#c_args[@]}" ]; then
@@ -22,7 +24,7 @@ for i in "${!c_files[@]}"; do
   args="${c_args[$i]}"
 
   # Compile the C file using gcc
-  gcc -o "${file%.c}" "$file"
+  gcc -o "${file%.c}" "$file" -lssl -lcrypto
 
   # Check if the compilation was successful
   if [ $? -eq 0 ]; then

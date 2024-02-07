@@ -7,73 +7,45 @@
 #include <time.h>
 
 #include "udp.h"
+#include "cbf.h"
 
 int verify_puzzle(int puzzle);
 int monitor();
 
 int main(int argc, char *argv[]) {
-    int sock;
+    const int sock = initialize(&server_address);
     char message[BUF_SIZE];
     int str_len;
     socklen_t address_size;
-    int puzzle;
+    unsigned int ip, port, dns_ip, dns_port, token, nonce;
+    unsigned int threshold = 64;
 
     struct sockaddr_in incoming_address;
-    initialize_address();
-
-    sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock == -1) {
-        error_handling("UDP socket creation error");
-    }
-    puts("Server socket creation successful");
-
-    const int option = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
-
-
-
-    if (bind(sock, (struct sockaddr *) &server_address, sizeof(server_address)) == -1) {
-        error_handling("bind() error");
-    }
-    puts("Server socket bind successful");
 
     while (1) {
         address_size = sizeof(incoming_address);
-        str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
-                                 (struct sockaddr *) &incoming_address, &address_size);
-
-        message[str_len] = '\0';
-        puts("server received query from user");
-
+        str_len = (int) recvfrom(sock, message, BUF_SIZE, 0, (struct sockaddr *) &incoming_address, &address_size);
         if(strcmp(message, "Q") == 0) {
             break;
         }
 
-        const int verified = verify_puzzle(atoi(message));
-        sprintf(message, "%d", verified);
-
-        sendto(sock, message, strlen(message), 0,
-               (struct sockaddr *) &incoming_address, address_size);
-        puts("server sent response to user");
-
-        const int signal = monitor();
-        if(signal) {
-            sprintf(message, "%d", signal);
-            sendto(sock, message, strlen(message), 0,
-                   (struct sockaddr *) &auth_address, address_size);
-            puts("server sent signal to authoritative DNS");
+        sscanf(message, "%u %u %u %u %u %u", &ip, &port, &dns_ip, &dns_port, &token, &nonce);
+        const unsigned int x = h(ip, port, dns_ip, dns_port, token, nonce);
+        if (x < threshold) {
+            printf("@");
+        } else {
+            printf("#");
         }
-    }
 
-    puts("All processes have completed");
+        sprintf(message, " ");
+        address_size = sizeof(incoming_address);
+        sendto(sock, message, strlen(message), 0,(struct sockaddr *) &incoming_address, address_size);
+
+    }
 
     close(sock);
     getchar();
     return 0;
-}
-
-int verify_puzzle(int puzzle) {
-    return (puzzle & 1023) == 0;
 }
 
 int monitor() {

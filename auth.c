@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 
 #include "udp.h"
+#include "cbf.h"
 
 int main(int argc, char *argv[]) {
     int sock;
@@ -15,7 +16,7 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
 
     struct sockaddr_in incoming_address;
-    initialize_address();
+    initialize();
 
     sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock == -1) {

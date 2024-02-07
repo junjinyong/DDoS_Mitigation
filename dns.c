@@ -6,79 +6,48 @@
 #include <sys/socket.h>
 
 #include "udp.h"
+#include "cbf.h"
 
 int main(int argc, char *argv[]) {
-    int sock;
+    if (argc != 2) {
+        exit(1);
+    }
+    const int index = (int) strtol(argv[1], NULL, 10);
+    const int sock = initialize(&dns_address[index]);
     char message[BUF_SIZE];
-    int str_len;
+    unsigned int str_len;
     socklen_t address_size;
-    int seed, length, difficulty, hash_chain[CHAIN_LENGTH];
+    unsigned int seed;
+    int length = -1;
+    unsigned int hash_chain[CHAIN_LENGTH];
+    unsigned int token, threshold;
 
     struct sockaddr_in incoming_address;
-    initialize_address();
 
-    sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (sock == -1) {
-        error_handling("UDP socket creation error");
-    }
-    puts("DNS socket creation successful");
-
-    const int option = 1;
-    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
-
-    if (bind(sock, (struct sockaddr *) &dns_address, sizeof(dns_address)) == -1) {
-        error_handling("bind() error");
-    }
-    puts("DNS socket bind successful");
-
-    int index = 0;
     while (1) {
-        address_size = sizeof(incoming_address);
-        str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
-                                 (struct sockaddr *) &incoming_address, &address_size);
-        message[str_len] = '\0';
+        str_len = (unsigned int) recvfrom(sock, message, BUF_SIZE, 0, (struct sockaddr *) &incoming_address, &address_size);
+        if (compare(&incoming_address, &auth_address)) {
 
-        if(compare(&incoming_address, &auth_address)) {
-            puts("Local DNS received signal from authoritative DNS");
+        } else {
+            if (length < 0) {
+                //sprintf(message, "");
 
-            sscanf(message, "%d %d %d", &seed, &length, &difficulty);
-
-            hash_chain[0] = seed + rand();
-            printf("seed: %d\n", seed);
-            for(int i = 1; i < length; ++i) {
-                hash_chain[i] = (hash_chain[i - 1] + 233333) * 2027;
-                if(hash_chain[i] == -1) {
-                    hash_chain[i] = 20020517;
+                seed = 0; //
+                hash_chain[0] = seed;
+                for (int i = 1; i < CHAIN_LENGTH; ++i) {
+                    hash_chain[i] = hash(hash_chain[i - 1], hash_chain[i - 1]);
                 }
+                length = CHAIN_LENGTH - 1;
             }
 
-            index = length - 1;
-            printf("length: %d\n", length);
-
-            continue;
+            token = hash_chain[length--];
+            threshold = 2048; //
+            sprintf(message, "%u %u", token, threshold);
+            address_size = sizeof(incoming_address);
+            sendto(sock, message, strlen(message), 0,(struct sockaddr *) &incoming_address, address_size);
         }
 
-        puts("DNS received query from user");
 
-        if(strcmp(message, "Q") == 0) {
-            break;
-        }
-
-        printf("index: %d\n", index);
-        if(index >= 0) {
-            sprintf(message, "%d", hash_chain[index]);
-            --index;
-        } else {
-            sprintf(message, "%d", 1);
-            sendto(sock, message, strlen(message), 0,
-                   (struct sockaddr *) &auth_address, address_size);
-
-            sprintf(message, "%d", -1);
-        }
-
-        sendto(sock, message, strlen(message), 0,
-               (struct sockaddr *) &incoming_address, address_size);
-        puts("DNS sent response to user");
     }
 
     puts("All processes have completed");
