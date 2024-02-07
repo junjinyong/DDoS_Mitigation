@@ -34,6 +34,8 @@ int main(int argc, char *argv[]) {
     }
     puts("Authoritative DNS socket bind successful");
 
+    sleep(1);
+
     while (1) {
         address_size = sizeof(incoming_address);
         str_len = (int) recvfrom(sock, message, BUF_SIZE, 0,
@@ -49,6 +51,8 @@ int main(int argc, char *argv[]) {
             } else if(signal == -1 && difficulty > 0) {
                 --difficulty;
             }
+            printf("difficulty: %d\n", difficulty);
+            continue;
         } else if(compare(&incoming_address, &dns_address)) {
             puts("Authoritative DNS detected signal from local DNS");
         } else {
