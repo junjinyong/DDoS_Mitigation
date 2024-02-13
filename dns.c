@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -9,50 +8,31 @@
 #include "cbf.h"
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        exit(1);
+    if (argc != 7) {
+        error_handling("Invalid arguments");
     }
-    const int index = (int) strtol(argv[1], NULL, 10);
-    const int sock = initialize(&dns_address[index]);
-    char message[BUF_SIZE];
-    unsigned int str_len;
-    socklen_t address_size;
-    unsigned int seed;
-    int length = -1;
-    unsigned int hash_chain[CHAIN_LENGTH];
-    unsigned int token, threshold;
+    const struct sockaddr_in dns_address1 = initialize_address(argv[1], argv[2]);
+    const struct sockaddr_in dns_address2 = initialize_address(argv[3], argv[4]);
+    const struct sockaddr_in auth_address = initialize_address(argv[5], argv[6]);
+    const int socket1 = create_socket(&dns_address1);
+    const int socket2 = create_socket(&dns_address2);
 
+    char message[BUFFER_SIZE];
     struct sockaddr_in incoming_address;
+    socklen_t address_size;
+    ssize_t str_len;
 
-    while (1) {
-        str_len = (unsigned int) recvfrom(sock, message, BUF_SIZE, 0, (struct sockaddr *) &incoming_address, &address_size);
-        if (compare(&incoming_address, &auth_address)) {
+    sleep(1);
 
-        } else {
-            if (length < 0) {
-                //sprintf(message, "");
-
-                seed = 0; //
-                hash_chain[0] = seed;
-                for (int i = 1; i < CHAIN_LENGTH; ++i) {
-                    hash_chain[i] = hash(hash_chain[i - 1], hash_chain[i - 1]);
-                }
-                length = CHAIN_LENGTH - 1;
-            }
-
-            token = hash_chain[length--];
-            threshold = 2048; //
-            sprintf(message, "%u %u", token, threshold);
-            address_size = sizeof(incoming_address);
-            sendto(sock, message, strlen(message), 0,(struct sockaddr *) &incoming_address, address_size);
-        }
-
-
+    for (int i = 0; i < 10000; ++i) {
+        address_size = sizeof(incoming_address);
+        str_len = recvfrom(socket1, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
+        sprintf(message, "%u %u", incoming_address.sin_addr.s_addr, incoming_address.sin_port);
+        sendto(socket1, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
     }
 
-    puts("All processes have completed");
-
-    close(sock);
+    close(socket1);
+    close(socket2);
     getchar();
     return 0;
 }

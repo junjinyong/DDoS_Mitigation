@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -8,74 +7,46 @@
 #include "udp.h"
 #include "cbf.h"
 
-int solve_puzzle(int token);
-
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        exit(1);
+int main(int argc, char *argv[]) {
+    if (argc != 5) {
+        error_handling("Invalid arguments");
     }
-    const int index = (int) strtol(argv[1], NULL, 10);
-    const int sock = initialize(NULL);
-    const unsigned int dns_ip = dns_address[index].sin_addr.s_addr;
-    const unsigned int dns_port = dns_address[index].sin_port;
-    const unsigned int ip = rand(); // get ip;
-    const unsigned int port = rand(); // get port;
+    const struct sockaddr_in user_address = initialize_address(NULL, NULL);
+    const struct sockaddr_in server_address = initialize_address(argv[1], argv[2]);
+    const struct sockaddr_in dns_address = initialize_address(argv[3], argv[4]);
+    const int socket = create_socket(NULL);
 
-    char message[BUF_SIZE];
-    unsigned int str_len;
-    socklen_t address_size;
-    unsigned int token;
-    unsigned int nonce;
-    unsigned int threshold;
+    char message[BUFFER_SIZE];
+    ssize_t str_len;
 
-    struct sockaddr_in incoming_address;
+    sleep(1);
 
-    int iter = 10000;
-    while (iter--) {
-        // Query token and threshold
-        printf("%d\n", iter);
-
-        address_size = sizeof(incoming_address);
+    for (int i = 0; i < 10000; ++i) {
+        printf("%d\n", i);
         sprintf(message, " ");
-        address_size = sizeof(dns_address[index]);
-        sendto(sock, message, strlen(message), 0, (struct sockaddr *) &(dns_address[index]), address_size);
-        str_len = (unsigned int) recvfrom(sock, message, BUF_SIZE, 0, (struct sockaddr *) &incoming_address, &address_size);
-        sscanf(message, "%u %u", &token, &threshold);
+        sendto(socket, message, strlen(message), 0, (struct sockaddr*) &dns_address, sizeof(dns_address));
+        str_len = recvfrom(socket, message, BUFFER_SIZE, 0, NULL, NULL);
+        message[str_len] = '\0';
+        const unsigned int token = strtoul(message, NULL, 10);
+        printf("%s\n", message);
 
-        // Solve puzzle
-        nonce = 0;
-        while (1) {
-            const unsigned int x = h(ip, port, dns_ip, dns_port, token, nonce);
-            if (x < threshold) {
+        unsigned int nonce = 0;
+        while(1) {
+            const unsigned int x = hash(token, nonce);
+            if (x < 1024) {
                 break;
             }
             ++nonce;
         }
 
-        // Query server
-        sprintf(message, "%u %u %u %u %u %u", ip, port, dns_ip, dns_port, token, nonce);
-        address_size = sizeof(server_address);
-        sendto(sock, message, strlen(message), 0,(struct sockaddr *) &server_address, address_size);
-        str_len = (unsigned int) recvfrom(sock, message, BUF_SIZE, 0, (struct sockaddr *) &incoming_address, &address_size);
+        sprintf(message, "%u", nonce);
+
+        sendto(socket, message, strlen(message), 0, (struct sockaddr*) &server_address, sizeof(server_address));
+        str_len = recvfrom(socket, message, BUFFER_SIZE, 0, NULL, NULL);
+        message[str_len] = '\0';
     }
 
-    puts("All processes have completed");
-    strcpy(message, "Q");
-    sendto(sock, message, strlen(message), 0,
-           (struct sockaddr *) &server_address, sizeof(server_address));
-    sendto(sock, message, strlen(message), 0,
-           (struct sockaddr *) &dns_address, sizeof(dns_address));
-    sendto(sock, message, strlen(message), 0,
-           (struct sockaddr *) &dns_address, sizeof(dns_address));
-
-    close(sock);
+    close(socket);
     getchar();
     return 0;
-}
-
-int solve_puzzle(int token) {
-    while((token & 1023) != 0) {
-        ++token;
-    }
-    return token;
 }
