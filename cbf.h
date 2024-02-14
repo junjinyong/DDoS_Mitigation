@@ -5,11 +5,9 @@
 #define M 8192
 #define K 4
 
-unsigned int h(unsigned int user_ip, unsigned int user_port, unsigned int dns_ip, unsigned int dns_port, unsigned int token, unsigned int nonce) {
-    unsigned char input[128];
+unsigned int h(const unsigned char* input) {
     unsigned char output[SHA256_DIGEST_LENGTH];
-    sprintf((char*) input, "%u %u %u %u %u %u", user_ip, user_port, dns_ip, dns_port, token, nonce);
-    SHA256((const unsigned char *) input, strlen((char*) input), output);
+    SHA256(input, strlen((char*) input), output);
     return *((unsigned int*) output);
 }
 

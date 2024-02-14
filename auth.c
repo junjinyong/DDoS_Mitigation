@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     const struct sockaddr_in server_address = initialize_address(argv[3], argv[4]);
     const int socket = create_socket(&auth_address);
 
-    sleep(1);
+    sleep(2);
 
     close(socket);
     getchar();

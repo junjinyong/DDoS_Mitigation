@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
     ssize_t str_len;
 
-    sleep(1);
+    sleep(2);
 
     for (int i = 0; i < 10000; ++i) {
         address_size = sizeof(incoming_address);

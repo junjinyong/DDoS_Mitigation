@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <time.h>
 
 #include "udp.h"
 #include "cbf.h"
@@ -22,7 +23,20 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
     ssize_t str_len;
 
-    sleep(1);
+    const clock_t start_time = clock();
+    while(1) {
+        const double elapsed_time = (double) (clock() - start_time) / CLOCKS_PER_SEC;
+        if (elapsed_time >= 1.0) {
+            break;
+        }
+        address_size = sizeof(incoming_address);
+        str_len = recvfrom(socket1, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
+        message[str_len] = '\0';
+        const unsigned int ip = incoming_address.sin_addr.s_addr;
+        const unsigned int port = incoming_address.sin_port;
+        sprintf(message, "%u %u", ip, port);
+        sendto(socket1, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
+    }
 
     for (int i = 0; i < 10000; ++i) {
         address_size = sizeof(incoming_address);
