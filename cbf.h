@@ -5,9 +5,9 @@
 #define M 8192
 #define K 4
 
-unsigned int h(const unsigned char* input) {
+unsigned int h(const char* input) {
     unsigned char output[SHA256_DIGEST_LENGTH];
-    SHA256(input, strlen((char*) input), output);
+    SHA256((unsigned char*) input, strlen(input), output);
     return *((unsigned int*) output);
 }
 

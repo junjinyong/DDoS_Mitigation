@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < 10000; ++i) {
         address_size = sizeof(incoming_address);
         str_len = recvfrom(socket1, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
-        sprintf(message, "%u %u", incoming_address.sin_addr.s_addr, incoming_address.sin_port);
+        sprintf(message, "%u %u", 200, 128);
         sendto(socket1, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
     }
 
