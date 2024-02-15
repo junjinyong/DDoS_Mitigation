@@ -24,9 +24,16 @@ int main(int argc, char *argv[]) {
     sleep(2);
 
     for (int i = 0; i < 10000; ++i) {
+        printf("%d\n", i);
         address_size = sizeof(incoming_address);
         str_len = recvfrom(socket, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
-        sprintf(message, "%u", 100);
+        message[str_len] = '\0';
+        const unsigned int threshold = 2048;
+        if(h(message) < threshold) {
+            sprintf(message, "valid");
+        } else {
+            sprintf(message, "invalid");
+        }
         sendto(socket, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
     }
 

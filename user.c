@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
     sleep(2);
 
     for (int i = 0; i < 10000; ++i) {
-        printf("%d\n", i);
+        printf("%d ", i);
         sprintf(message, " ");
         sendto(socket, message, strlen(message), 0, (struct sockaddr*) &dns_address, sizeof(dns_address));
         str_len = recvfrom(socket, message, BUFFER_SIZE, 0, NULL, NULL);
@@ -55,6 +55,7 @@ int main(int argc, char *argv[]) {
         sendto(socket, message, strlen(message), 0, (struct sockaddr*) &server_address, sizeof(server_address));
         str_len = recvfrom(socket, message, BUFFER_SIZE, 0, NULL, NULL);
         message[str_len] = '\0';
+        printf("%s\n", message);
     }
 
     close(socket);

@@ -15,7 +15,23 @@ int main(int argc, char *argv[]) {
     const struct sockaddr_in server_address = initialize_address(argv[3], argv[4]);
     const int socket = create_socket(&auth_address);
 
-    sleep(2);
+    char message[BUFFER_SIZE];
+    struct sockaddr_in incoming_address;
+    socklen_t address_size;
+    ssize_t str_len;
+
+    unsigned int x = 42;
+    for (int i = 0; i < 10000; ++i) {
+        printf("%d\n", i);
+        address_size = sizeof(incoming_address);
+        str_len = recvfrom(socket, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
+        message[str_len] = '\0';
+        x = hash(x, x);
+        sprintf(message, "%u %u", x, MAX_LENGTH - 1);
+        sendto(socket, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
+
+        printf("Hi\n");
+    }
 
     close(socket);
     getchar();

@@ -4,6 +4,7 @@
 
 #define M 8192
 #define K 4
+#define MAX_LENGTH 32
 
 unsigned int h(const char* input) {
     unsigned char output[SHA256_DIGEST_LENGTH];

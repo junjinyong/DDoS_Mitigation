@@ -4,8 +4,8 @@
 # SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 
 # Specify the list of C files you want to compile and run
-c_files=("server.c" "auth.c" "dns.c" "user.c" "user.c" "dns.c" "user.c" "user.c")
-# c_files=("server.c" "auth.c" "dns.c" "user.c")
+# c_files=("server.c" "auth.c" "dns.c" "user.c" "user.c" "dns.c" "user.c" "user.c")
+c_files=("server.c" "auth.c" "dns.c" "user.c")
 
 # Specify the corresponding list of arguments for each C file
 # Use empty string ("") if no arguments are needed for a particular file
@@ -16,8 +16,8 @@ local11="$loop_back 30000"
 local12="$loop_back 40000"
 local21="$loop_back 50000"
 local22="$loop_back 60000"
-c_args=("$target $auth" "$auth $target" "$local11 $local12 $auth" "$target $local11" "$target $local11" "$local21 $local22 $auth" "$target $local21" "$target $local21")
-# c_args=("$target $auth" "$auth $target" "$local11 $local12 $auth" "$target $local11")
+# c_args=("$target $auth" "$auth $target" "$local11 $local12 $auth" "$target $local11" "$target $local11" "$local21 $local22 $auth" "$target $local21" "$target $local21")
+c_args=("$target $auth" "$auth $target" "$local11 $local12 $auth" "$target $local11")
 
 # Check if the lengths of the two lists are equal
 if [ "${#c_files[@]}" -ne "${#c_args[@]}" ]; then
