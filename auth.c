@@ -31,7 +31,8 @@ int main(int argc, char *argv[]) {
         const unsigned int dns_ip = strtoul(pos, &pos, 10);
         const unsigned int dns_port = strtoul(pos, &pos, 10);
 
-        seed = hash(seed, seed);
+        const unsigned int salt = 42;
+        seed = hash(salt, seed);
         const unsigned int length = MAX_LENGTH - 1;
         sprintf(message, "%u %u", seed, length);
         sendto(socket, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));

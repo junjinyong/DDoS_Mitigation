@@ -22,7 +22,6 @@ unsigned int hash(unsigned int i, unsigned int x) {
 
 struct CBF {
     struct sockaddr_in address;
-    unsigned int chain[MAX_LENGTH];
     unsigned int arr[M];
     struct CBF* next;
 } typedef CBF;
@@ -34,7 +33,7 @@ void insert(CBF* cbf, unsigned int x) {
     }
 }
 
-int test(CBF* cbf, int x) {
+int test(CBF* cbf, unsigned int x) {
     for (int i = 0; i < K; ++i) {
         const unsigned int p = hash(i, x) % M;
         if ((cbf -> arr)[p] <= 0) {
@@ -44,7 +43,7 @@ int test(CBF* cbf, int x) {
     return 1;
 }
 
-int erase(CBF* cbf, int x) {
+int erase(CBF* cbf, unsigned int x) {
     if (test(cbf, x) != 0) {
         return 0;
     }

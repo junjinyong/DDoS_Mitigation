@@ -59,15 +59,12 @@ int main(int argc, char *argv[]) {
             for (CBF* t = root -> next; t != NULL; t = t -> next) {
                 ++count;
             }
-            printf("count: %d\n", count);
 
-            (curr -> chain)[0] = seed;
-            printf("Insert: %u ", seed);
             const unsigned int salt = 42;
-            for (int j = 0; j + 1 < length; ++j) {
-                const unsigned int x = hash(salt, (curr -> chain)[j]);
-                printf("%u ", x);
-                (curr -> chain)[j + 1] = x;
+            unsigned int token = seed;
+            for (int j = 0; j < length; ++j) {
+                insert(curr, token);
+                token = hash(salt, token);
             }
             printf("\n");
         } else {
@@ -94,7 +91,6 @@ int main(int argc, char *argv[]) {
 
             CBF* curr = root -> next;
             while(curr && !compare(&dns, &(curr -> address))) {
-                printf("TT %u %u\n", (curr -> address).sin_addr.s_addr, (curr -> address).sin_port);
                 curr = curr -> next;
             }
             if (curr == NULL) {
@@ -104,7 +100,7 @@ int main(int argc, char *argv[]) {
 
             unsigned int flag = 0;
             for (int j = 0; j < MAX_LENGTH; ++j) {
-                if ((curr -> chain)[j] == token) {
+                if (test(curr, token)) {
                     flag = 1;
                     break;
                 }
