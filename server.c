@@ -98,14 +98,7 @@ int main(int argc, char *argv[]) {
                 goto LABEL1;
             }
 
-            unsigned int flag = 0;
-            for (int j = 0; j < MAX_LENGTH; ++j) {
-                if (test(curr, token)) {
-                    flag = 1;
-                    break;
-                }
-            }
-            if (flag == 0) {
+            if (erase(curr, token) == 0) {
                 printf("D\n");
                 goto LABEL1;
             }

@@ -18,15 +18,13 @@ int main(int argc, char *argv[]) {
     char message[BUFFER_SIZE];
     ssize_t str_len;
 
-    sleep(1);
-
     sprintf(message, " ");
     sendto(socket, message, strlen(message), 0, (struct sockaddr*) &dns_address, sizeof(dns_address));
     str_len = recvfrom(socket, message, BUFFER_SIZE, 0, NULL, NULL);
     message[str_len] = '\0';
     char* pos = message;
     const unsigned int ip = strtoul(pos, &pos, 10);
-    const unsigned int port = strtoul(pos, NULL, 10);
+    const unsigned int port = strtoul(pos, &pos, 10);
     const unsigned int dns_ip = dns_address.sin_addr.s_addr;
     const unsigned int dns_port = dns_address.sin_port;
     printf("User\nip: %u\nport: %u\n\n", ip, port);
