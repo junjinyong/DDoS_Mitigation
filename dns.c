@@ -47,13 +47,17 @@ int main(int argc, char *argv[]) {
         message[str_len] = '\0';
         printf("index: %d\n", index);
         if (index < 0) {
-            printf("null\n");
+            const unsigned int dns_ip = dns_address1.sin_addr.s_addr;
+            const unsigned int dns_port = dns_address1.sin_port;
+            sprintf(message, "%u %u", dns_ip, dns_port);
             sendto(socket2, message, strlen(message), 0, (struct sockaddr*) &auth_address, sizeof(auth_address));
+
             str_len = recvfrom(socket2, message, BUFFER_SIZE, 0, NULL, NULL);
             message[str_len] = '\0';
-            char* pos;
-            const unsigned int seed = strtoul(message, &pos, 10);
+            char* pos = message;
+            const unsigned int seed = strtoul(pos, &pos, 10);
             const int length = (int) strtol(pos, NULL, 10);
+
             hash_chain[0] = seed;
             const unsigned int salt = 42;
             for (int j = 0; j + 1 < length; ++j) {

@@ -20,15 +20,24 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
     ssize_t str_len;
 
-    unsigned int x = 42;
+    unsigned int seed = 42;
     for (int i = 0; i < 10000; ++i) {
         printf("%d\n", i);
         address_size = sizeof(incoming_address);
         str_len = recvfrom(socket, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
         message[str_len] = '\0';
-        x = hash(x, x);
-        sprintf(message, "%u %u", x, MAX_LENGTH - 1);
+
+        char* pos = message;
+        const unsigned int dns_ip = strtoul(pos, &pos, 10);
+        const unsigned int dns_port = strtoul(pos, &pos, 10);
+
+        seed = hash(seed, seed);
+        const unsigned int length = MAX_LENGTH - 1;
+        sprintf(message, "%u %u", seed, length);
         sendto(socket, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
+
+        sprintf(message, "%u %u %u %u", dns_ip, dns_port, seed, length);
+        sendto(socket, message, strlen(message), 0, (struct sockaddr*) &server_address, sizeof(server_address));
 
         printf("Hi\n");
     }

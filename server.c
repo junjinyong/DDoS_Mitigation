@@ -21,6 +21,11 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
     ssize_t str_len;
 
+    CBF* root = (CBF*) malloc(sizeof(CBF));
+    (root -> address).sin_addr.s_addr = 0;
+    (root -> address).sin_port = 0;
+    root -> next = NULL;
+
     sleep(2);
 
     for (int i = 0; i < 10000; ++i) {
@@ -28,13 +33,94 @@ int main(int argc, char *argv[]) {
         address_size = sizeof(incoming_address);
         str_len = recvfrom(socket, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
         message[str_len] = '\0';
-        const unsigned int threshold = 2048;
-        if(h(message) < threshold) {
-            sprintf(message, "valid");
+        if (compare(&incoming_address, &auth_address)) {
+            char* pos = message;
+            const unsigned int dns_ip = strtoul(pos, &pos, 10);
+            const unsigned int dns_port = strtoul(pos, &pos, 10);
+            const unsigned int seed = strtoul(pos, &pos, 10);
+            const unsigned int length = strtoul(pos, &pos, 10);
+
+            CBF* prev = root;
+            CBF* curr = root -> next;
+            const struct sockaddr_in dns = create_address(dns_ip, dns_port);
+            while (curr && !compare(&dns, &(curr -> address))) {
+                prev = curr;
+                curr = curr -> next;
+            }
+            if (curr == NULL) {
+                CBF* node = (CBF*) malloc(sizeof(CBF));
+                node -> address = dns;
+                node -> next = NULL;
+                prev -> next = node;
+                curr = node;
+            }
+
+            int count = 0;
+            for (CBF* t = root -> next; t != NULL; t = t -> next) {
+                ++count;
+            }
+            printf("count: %d\n", count);
+
+            (curr -> chain)[0] = seed;
+            printf("Insert: %u ", seed);
+            const unsigned int salt = 42;
+            for (int j = 0; j + 1 < length; ++j) {
+                const unsigned int x = hash(salt, (curr -> chain)[j]);
+                printf("%u ", x);
+                (curr -> chain)[j + 1] = x;
+            }
+            printf("\n");
         } else {
+            const unsigned int threshold = 2048;
+            if (h(message) >= threshold) {
+                printf("A\n");
+                goto LABEL1;
+            }
+
+            char* pos = message;
+            const unsigned int ip = strtoul(pos, &pos, 10);
+            const unsigned int port = strtoul(pos, &pos, 10);
+            const unsigned int dns_ip = strtoul(pos, &pos, 10);
+            const unsigned int dns_port = strtoul(pos, &pos, 10);
+            const unsigned int token = strtoul(pos, &pos, 10);
+
+            const struct sockaddr_in user = create_address(ip, port);
+            if (!compare(&user, &incoming_address)) {
+                printf("B\n");
+                goto LABEL1;
+            }
+
+            const struct sockaddr_in dns = create_address(dns_ip, dns_port);
+
+            CBF* curr = root -> next;
+            while(curr && !compare(&dns, &(curr -> address))) {
+                printf("TT %u %u\n", (curr -> address).sin_addr.s_addr, (curr -> address).sin_port);
+                curr = curr -> next;
+            }
+            if (curr == NULL) {
+                printf("C\n");
+                goto LABEL1;
+            }
+
+            unsigned int flag = 0;
+            for (int j = 0; j < MAX_LENGTH; ++j) {
+                if ((curr -> chain)[j] == token) {
+                    flag = 1;
+                    break;
+                }
+            }
+            if (flag == 0) {
+                printf("D\n");
+                goto LABEL1;
+            }
+
+            sprintf(message, "valid");
+            goto LABEL2;
+LABEL1:
             sprintf(message, "invalid");
+LABEL2:
+            sendto(socket, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
         }
-        sendto(socket, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
     }
 
     close(socket);

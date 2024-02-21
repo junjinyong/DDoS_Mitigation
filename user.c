@@ -24,8 +24,8 @@ int main(int argc, char *argv[]) {
     sendto(socket, message, strlen(message), 0, (struct sockaddr*) &dns_address, sizeof(dns_address));
     str_len = recvfrom(socket, message, BUFFER_SIZE, 0, NULL, NULL);
     message[str_len] = '\0';
-    char* pos;
-    const unsigned int ip = strtoul(message, &pos, 10);
+    char* pos = message;
+    const unsigned int ip = strtoul(pos, &pos, 10);
     const unsigned int port = strtoul(pos, NULL, 10);
     const unsigned int dns_ip = dns_address.sin_addr.s_addr;
     const unsigned int dns_port = dns_address.sin_port;

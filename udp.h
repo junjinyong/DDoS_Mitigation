@@ -40,6 +40,13 @@ int create_socket(const struct sockaddr_in* address) {
     return sock;
 }
 
+struct sockaddr_in create_address(const unsigned int ip, const unsigned int port) {
+    struct sockaddr_in address;
+    address.sin_addr.s_addr = ip;
+    address.sin_port = port;
+    return address;
+}
+
 int compare(const struct sockaddr_in *a, const struct sockaddr_in *b) {
     return (a -> sin_addr).s_addr == (b -> sin_addr).s_addr && (a -> sin_port) == (b -> sin_port);
 }

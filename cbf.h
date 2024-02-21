@@ -21,7 +21,10 @@ unsigned int hash(unsigned int i, unsigned int x) {
 }
 
 struct CBF {
+    struct sockaddr_in address;
+    unsigned int chain[MAX_LENGTH];
     unsigned int arr[M];
+    struct CBF* next;
 } typedef CBF;
 
 void insert(CBF* cbf, unsigned int x) {
