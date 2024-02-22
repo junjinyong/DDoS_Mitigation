@@ -7,6 +7,7 @@
 
 #include "udp.h"
 #include "cbf.h"
+#include "monitor.h"
 
 int main(int argc, char *argv[]) {
     if (argc != 5) {
@@ -22,11 +23,13 @@ int main(int argc, char *argv[]) {
     ssize_t str_len;
 
     CBF* root = (CBF*) malloc(sizeof(CBF));
-    (root -> address).sin_addr.s_addr = 0;
-    (root -> address).sin_port = 0;
+    root -> address = create_address(0, 0);
     root -> next = NULL;
 
-    sleep(2);
+    Bin* b = (Bin*) malloc(sizeof(Bin));
+    b -> next = NULL;
+
+    sleep(1);
 
     for (int i = 0; i < 10000; ++i) {
         printf("%d\n", i);
@@ -39,10 +42,10 @@ int main(int argc, char *argv[]) {
             const unsigned int dns_port = strtoul(pos, &pos, 10);
             const unsigned int seed = strtoul(pos, &pos, 10);
             const unsigned int length = strtoul(pos, &pos, 10);
+            const struct sockaddr_in dns = create_address(dns_ip, dns_port);
 
             CBF* prev = root;
             CBF* curr = root -> next;
-            const struct sockaddr_in dns = create_address(dns_ip, dns_port);
             while (curr && !compare(&dns, &(curr -> address))) {
                 prev = curr;
                 curr = curr -> next;
@@ -51,6 +54,7 @@ int main(int argc, char *argv[]) {
                 CBF* node = (CBF*) malloc(sizeof(CBF));
                 node -> address = dns;
                 node -> next = NULL;
+                node -> threshold = DEFAULT_THRESHOLD;
                 prev -> next = node;
                 curr = node;
             }
@@ -68,26 +72,19 @@ int main(int argc, char *argv[]) {
             }
             printf("\n");
         } else {
-            const unsigned int threshold = 2048;
-            if (h(message) >= threshold) {
-                printf("A\n");
-                goto LABEL1;
-            }
-
             char* pos = message;
             const unsigned int ip = strtoul(pos, &pos, 10);
             const unsigned int port = strtoul(pos, &pos, 10);
             const unsigned int dns_ip = strtoul(pos, &pos, 10);
             const unsigned int dns_port = strtoul(pos, &pos, 10);
             const unsigned int token = strtoul(pos, &pos, 10);
+            const struct sockaddr_in dns = create_address(dns_ip, dns_port);
 
             const struct sockaddr_in user = create_address(ip, port);
             if (!compare(&user, &incoming_address)) {
                 printf("B\n");
                 goto LABEL1;
             }
-
-            const struct sockaddr_in dns = create_address(dns_ip, dns_port);
 
             CBF* curr = root -> next;
             while(curr && !compare(&dns, &(curr -> address))) {
@@ -98,18 +95,65 @@ int main(int argc, char *argv[]) {
                 goto LABEL1;
             }
 
+            const unsigned int threshold = curr -> threshold;
+            if (h(message) >= threshold) {
+                printf("A\n");
+                goto LABEL1;
+            }
+
             if (erase(curr, token) == 0) {
                 printf("D\n");
                 goto LABEL1;
             }
 
+            Bin* p = b;
+            Bin* c = b -> next;
+            while(c && !compare(&dns, &(c -> address))) {
+                p = c;
+                c = c -> next;
+            }
+            if (c == NULL) {
+                Bin* n = (Bin*) malloc(sizeof(Bin));
+                n -> address = dns;
+                n -> start = time(NULL);
+                n -> count = 0;
+                n -> next = NULL;
+                p -> next = n;
+                c = n;
+            }
+            const int difficulty = poll(c);
+            if (difficulty) {
+                printf("Difficulty: %u -> ", curr -> threshold);
+                unsigned int result;
+                if (difficulty == 1) {
+                    result = (curr -> threshold + 1) >> 1;
+                }
+                if (difficulty == -1 && threshold < (2 << 30)) {
+                    result = (curr -> threshold) << 1;
+                }
+                curr -> threshold = result;
+                printf("%u\n", result);
+
+                sprintf(message, "%u", result);
+                sendto(socket, message, strlen(message), 0, (struct sockaddr*) &dns, sizeof(dns));
+
+            }
+
             sprintf(message, "valid");
+
             goto LABEL2;
 LABEL1:
             sprintf(message, "invalid");
 LABEL2:
             sendto(socket, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
         }
+    }
+
+    CBF* curr = root;
+    while(curr) {
+        CBF* prev = curr;
+        curr = curr -> next;
+        free(prev);
     }
 
     close(socket);

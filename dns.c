@@ -9,12 +9,13 @@
 #include "cbf.h"
 
 int main(int argc, char *argv[]) {
-    if (argc != 7) {
+    if (argc != 9) {
         error_handling("Invalid arguments");
     }
     const struct sockaddr_in dns_address1 = initialize_address(argv[1], argv[2]);
     const struct sockaddr_in dns_address2 = initialize_address(argv[3], argv[4]);
     const struct sockaddr_in auth_address = initialize_address(argv[5], argv[6]);
+    const struct sockaddr_in server_address = initialize_address(argv[7], argv[8]);
     const int socket1 = create_socket(&dns_address1);
     const int socket2 = create_socket(&dns_address2);
 
@@ -23,10 +24,12 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
     ssize_t str_len;
 
+    unsigned int threshold = DEFAULT_THRESHOLD;
+
     const time_t start_time = time(NULL);
     while(1) {
         const double elapsed_time = difftime(time(NULL), start_time);
-        if (elapsed_time >= 1.0) {
+        if (elapsed_time >= 2.0) {
             break;
         }
         address_size = sizeof(incoming_address);
@@ -45,28 +48,37 @@ int main(int argc, char *argv[]) {
         address_size = sizeof(incoming_address);
         str_len = recvfrom(socket1, message, BUFFER_SIZE, 0, (struct sockaddr*) &incoming_address, &address_size);
         message[str_len] = '\0';
-        printf("index: %d\n", index);
-        if (index < 0) {
-            const unsigned int dns_ip = dns_address1.sin_addr.s_addr;
-            const unsigned int dns_port = dns_address1.sin_port;
-            sprintf(message, "%u %u", dns_ip, dns_port);
-            sendto(socket2, message, strlen(message), 0, (struct sockaddr*) &auth_address, sizeof(auth_address));
+        printf("%d\n", index);
 
-            str_len = recvfrom(socket2, message, BUFFER_SIZE, 0, NULL, NULL);
-            message[str_len] = '\0';
+        if (compare(&incoming_address, &server_address)) {
             char* pos = message;
-            const unsigned int seed = strtoul(pos, &pos, 10);
-            const int length = (int) strtol(pos, NULL, 10);
+            printf("Difficulty: %u -> ", threshold);
+            threshold = strtoul(pos, &pos, 10);
 
-            hash_chain[0] = seed;
-            const unsigned int salt = 42;
-            for (int j = 0; j + 1 < length; ++j) {
-                hash_chain[j + 1] = hash(salt, hash_chain[j]);
+            printf("%u\n", threshold);
+        } else {
+            if (index < 0) {
+                const unsigned int dns_ip = dns_address1.sin_addr.s_addr;
+                const unsigned int dns_port = dns_address1.sin_port;
+                sprintf(message, "%u %u", dns_ip, dns_port);
+                sendto(socket2, message, strlen(message), 0, (struct sockaddr*) &auth_address, sizeof(auth_address));
+
+                str_len = recvfrom(socket2, message, BUFFER_SIZE, 0, NULL, NULL);
+                message[str_len] = '\0';
+                char* pos = message;
+                const unsigned int seed = strtoul(pos, &pos, 10);
+                const unsigned int length = strtoul(pos, &pos, 10);
+
+                hash_chain[0] = seed;
+                const unsigned int salt = 42;
+                for (int j = 0; j + 1 < length; ++j) {
+                    hash_chain[j + 1] = hash(salt, hash_chain[j]);
+                }
+                index = (int) length - 1;
             }
-            index = length - 1;
+            sprintf(message, "%u %u", hash_chain[index--], threshold);
+            sendto(socket1, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
         }
-        sprintf(message, "%u %u", hash_chain[index--], 2048);
-        sendto(socket1, message, strlen(message), 0, (struct sockaddr*) &incoming_address, sizeof(incoming_address));
     }
 
     close(socket1);

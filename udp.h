@@ -42,6 +42,7 @@ int create_socket(const struct sockaddr_in* address) {
 
 struct sockaddr_in create_address(const unsigned int ip, const unsigned int port) {
     struct sockaddr_in address;
+    address.sin_family = AF_INET;
     address.sin_addr.s_addr = ip;
     address.sin_port = port;
     return address;

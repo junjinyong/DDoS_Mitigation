@@ -20,6 +20,8 @@ int main(int argc, char *argv[]) {
     socklen_t address_size;
     ssize_t str_len;
 
+    sleep(1);
+
     unsigned int seed = 42;
     for (int i = 0; i < 10000; ++i) {
         printf("%d\n", i);
@@ -39,8 +41,6 @@ int main(int argc, char *argv[]) {
 
         sprintf(message, "%u %u %u %u", dns_ip, dns_port, seed, length);
         sendto(socket, message, strlen(message), 0, (struct sockaddr*) &server_address, sizeof(server_address));
-
-        printf("Hi\n");
     }
 
     close(socket);

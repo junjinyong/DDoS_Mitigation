@@ -18,6 +18,8 @@ int main(int argc, char *argv[]) {
     char message[BUFFER_SIZE];
     ssize_t str_len;
 
+    sleep(1);
+
     sprintf(message, " ");
     sendto(socket, message, strlen(message), 0, (struct sockaddr*) &dns_address, sizeof(dns_address));
     str_len = recvfrom(socket, message, BUFFER_SIZE, 0, NULL, NULL);

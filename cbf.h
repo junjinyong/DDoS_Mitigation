@@ -5,6 +5,7 @@
 #define M 8192
 #define K 4
 #define MAX_LENGTH 32
+#define DEFAULT_THRESHOLD 65536
 
 unsigned int h(const char* input) {
     unsigned char output[SHA256_DIGEST_LENGTH];
@@ -22,21 +23,22 @@ unsigned int hash(unsigned int i, unsigned int x) {
 
 struct CBF {
     struct sockaddr_in address;
-    unsigned int arr[M];
+    unsigned int table[M];
+    unsigned int threshold;
     struct CBF* next;
 } typedef CBF;
 
 void insert(CBF* cbf, unsigned int x) {
     for (int i = 0; i < K; ++i) {
         const unsigned int p = hash(i, x) % M;
-        ++(cbf -> arr)[p];
+        ++(cbf -> table)[p];
     }
 }
 
 int test(CBF* cbf, unsigned int x) {
     for (int i = 0; i < K; ++i) {
         const unsigned int p = hash(i, x) % M;
-        if ((cbf -> arr)[p] <= 0) {
+        if ((cbf -> table)[p] <= 0) {
             return 0;
         }
     }
@@ -44,12 +46,12 @@ int test(CBF* cbf, unsigned int x) {
 }
 
 int erase(CBF* cbf, unsigned int x) {
-    if (test(cbf, x) != 0) {
+    if (!test(cbf, x)) {
         return 0;
     }
     for (int i = 0; i < K; ++i) {
         const unsigned int p = hash(i, x) % M;
-        --(cbf -> arr)[p];
+        --(cbf -> table)[p];
     }
     return 1;
 }
